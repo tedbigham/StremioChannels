@@ -65,7 +65,7 @@ class LaunchStremioActivity : Activity() {
             .build()
 
     private companion object {
-        const val TAG = "TvChannelsProof"
+        const val TAG = "StremioChannels"
         const val EXTRA_PREVIEW_ITEM_ID = "preview_item_id"
         const val EXTRA_MOVIE_TITLE = "movie_title"
         const val LAUNCH_DELAY_MS = 150L

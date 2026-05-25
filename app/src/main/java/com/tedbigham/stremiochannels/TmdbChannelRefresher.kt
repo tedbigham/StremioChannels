@@ -17,10 +17,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 object TmdbChannelRefresher {
-    private const val TAG = "TvChannelsProof"
+    private const val TAG = "StremioChannels"
     private const val PREFS_NAME = "tv_preview_channel"
-    private const val LEGACY_CHANNEL_INTERNAL_ID = "new-releases-test-channel"
-    private const val LEGACY_PROGRAM_INTERNAL_ID_PREFIX = "new-release-test-"
+    private const val NOW_PLAYING_CHANNEL_ID = "tmdb-now-playing-movies"
     private const val PROGRAM_INTERNAL_ID_PREFIX = "tmdb-program-"
     private const val EXTRA_PREVIEW_ITEM_ID = "preview_item_id"
     private const val EXTRA_MOVIE_TITLE = "movie_title"
@@ -133,7 +132,7 @@ object TmdbChannelRefresher {
         val savedChannelId = prefs.getLong(channelKey, -1L)
         val existingChannelId = savedChannelId.takeIf { it != -1L && channelHelper.getPreviewChannel(it) != null }
             ?: channelHelper.getAllChannels()
-                .firstOrNull { it.internalProviderId == config.id }
+                .firstOrNull { it.internalProviderId == config.id || it.displayName == config.displayName }
                 ?.id
         val channel = PreviewChannel.Builder()
             .setDisplayName(config.displayName)
@@ -161,7 +160,7 @@ object TmdbChannelRefresher {
     }
 
     private fun clearExistingPrograms(context: Context, config: ChannelConfig, channelId: Long) {
-        val idsToDelete = (loadSavedProgramIds(context, config) + findExistingProgramIds(context, config, channelId))
+        val idsToDelete = (loadSavedProgramIds(context, config) + findExistingProgramIds(context, channelId))
             .distinct()
         idsToDelete.forEach { programId ->
             context.contentResolver.delete(TvContractCompat.buildPreviewProgramUri(programId), null, null)
@@ -304,11 +303,10 @@ object TmdbChannelRefresher {
         } ?: 0
     }
 
-    private fun findExistingProgramIds(context: Context, config: ChannelConfig, channelId: Long): List<Long> {
+    private fun findExistingProgramIds(context: Context, channelId: Long): List<Long> {
         val projection = arrayOf(
             TvContractCompat.PreviewPrograms._ID,
-            TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID,
-            TvContractCompat.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID
+            TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID
         )
 
         return context.contentResolver.query(
@@ -323,13 +321,7 @@ object TmdbChannelRefresher {
                     val rowChannelId = cursor.getLong(
                         cursor.getColumnIndexOrThrow(TvContractCompat.PreviewPrograms.COLUMN_CHANNEL_ID)
                     )
-                    val internalProviderId = cursor.getString(
-                        cursor.getColumnIndexOrThrow(TvContractCompat.PreviewPrograms.COLUMN_INTERNAL_PROVIDER_ID)
-                    )
-                    val isCurrentProgram = internalProviderId?.startsWith(programPrefix(config)) == true
-                    val isLegacyProgram = config.id == LEGACY_CHANNEL_INTERNAL_ID &&
-                        internalProviderId?.startsWith(LEGACY_PROGRAM_INTERNAL_ID_PREFIX) == true
-                    if (rowChannelId == channelId && (isCurrentProgram || isLegacyProgram)) {
+                    if (rowChannelId == channelId) {
                         add(cursor.getLong(cursor.getColumnIndexOrThrow(TvContractCompat.PreviewPrograms._ID)))
                     }
                 }
@@ -392,7 +384,7 @@ object TmdbChannelRefresher {
     }
 
     private fun channelConfigs() = listOf(
-        ChannelConfig(LEGACY_CHANNEL_INTERNAL_ID, "Now Playing Movies", "/movie/now_playing?language=en-US", MEDIA_TYPE_MOVIE),
+        ChannelConfig(NOW_PLAYING_CHANNEL_ID, "Now Playing Movies", "/movie/now_playing?language=en-US", MEDIA_TYPE_MOVIE),
         ChannelConfig("tmdb-popular-movies", "Popular Movies", "/movie/popular?language=en-US", MEDIA_TYPE_MOVIE),
         ChannelConfig("tmdb-trending-movies-day", "Trending Movies Today", "/trending/movie/day?language=en-US", MEDIA_TYPE_MOVIE),
         ChannelConfig("tmdb-trending-movies-week", "Trending Movies This Week", "/trending/movie/week?language=en-US", MEDIA_TYPE_MOVIE),

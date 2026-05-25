@@ -17,6 +17,6 @@ class BootRefreshReceiver : BroadcastReceiver() {
     }
 
     private companion object {
-        const val TAG = "TvChannelsProof"
+        const val TAG = "StremioChannels"
     }
 }

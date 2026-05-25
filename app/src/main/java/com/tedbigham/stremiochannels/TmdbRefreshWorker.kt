@@ -32,6 +32,6 @@ class TmdbRefreshWorker(
     }
 
     private companion object {
-        const val TAG = "TvChannelsProof"
+        const val TAG = "StremioChannels"
     }
 }

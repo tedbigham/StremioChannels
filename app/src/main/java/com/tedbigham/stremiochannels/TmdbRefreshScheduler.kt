@@ -13,7 +13,7 @@ import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
 
 object TmdbRefreshScheduler {
-    private const val TAG = "TvChannelsProof"
+    private const val TAG = "StremioChannels"
     private const val IMMEDIATE_WORK_NAME = "tmdb-channel-refresh-now"
     private const val PERIODIC_WORK_NAME = "tmdb-channel-refresh-periodic"
 
