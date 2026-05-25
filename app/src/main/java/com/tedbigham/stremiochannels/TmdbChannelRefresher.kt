@@ -3,9 +3,7 @@ package com.tedbigham.stremiochannels
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.tvprovider.media.tv.PreviewChannel
@@ -33,6 +31,7 @@ object TmdbChannelRefresher {
     private const val TMDB_MAX_PAGES = 5
     private const val TMDB_PAGE_SIZE = 20
     private const val DEFAULT_MAX_ITEMS = 100
+    private const val CHANNEL_LOGO_SIZE_PX = 320
 
     fun refreshAll(context: Context): RefreshSummary {
         val appContext = context.applicationContext
@@ -141,7 +140,7 @@ object TmdbChannelRefresher {
             .setDescription("TMDB-backed Android TV home channel")
             .setAppLinkIntent(launchIntent(context = context, itemId = config.id))
             .setInternalProviderId(config.id)
-            .setLogo(channelLogo())
+            .setLogo(channelLogo(context))
             .build()
 
         if (existingChannelId != null) {
@@ -360,18 +359,9 @@ object TmdbChannelRefresher {
 
     private fun programInternalProviderId(config: ChannelConfig, tmdbId: Long) = "${programPrefix(config)}$tmdbId"
 
-    private fun channelLogo(): Bitmap {
-        val bitmap = Bitmap.createBitmap(320, 180, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.rgb(30, 42, 56))
-
-        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            textSize = 26f
-            isFakeBoldText = true
-        }
-        canvas.drawText("TMDB", 32f, 92f, paint)
-        return bitmap
+    private fun channelLogo(context: Context): Bitmap {
+        val logo = BitmapFactory.decodeResource(context.resources, R.drawable.ic_launcher_user_foreground)
+        return Bitmap.createScaledBitmap(logo, CHANNEL_LOGO_SIZE_PX, CHANNEL_LOGO_SIZE_PX, true)
     }
 
     private data class TmdbItem(
