@@ -31,7 +31,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.StremioChannels.NoDisplay">
+            android:theme="@style/Theme.StremioChannels">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

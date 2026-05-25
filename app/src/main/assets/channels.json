@@ -1,0 +1,128 @@
+[
+  {
+    "id": "tmdb-now-playing-movies",
+    "displayName": "Now Playing Movies",
+    "tmdbPath": "/movie/now_playing?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-popular-movies",
+    "displayName": "Popular Movies",
+    "tmdbPath": "/movie/popular?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-trending-movies-day",
+    "displayName": "Trending Movies Today",
+    "tmdbPath": "/trending/movie/day?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-trending-movies-week",
+    "displayName": "Trending Movies This Week",
+    "tmdbPath": "/trending/movie/week?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-upcoming-movies",
+    "displayName": "Upcoming Movies",
+    "tmdbPath": "/movie/upcoming?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-top-rated-movies",
+    "displayName": "Top Rated Movies",
+    "tmdbPath": "/movie/top_rated?language=en-US",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-popular-tv",
+    "displayName": "Popular TV",
+    "tmdbPath": "/tv/popular?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-top-rated-tv",
+    "displayName": "Top Rated TV",
+    "tmdbPath": "/tv/top_rated?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-trending-tv-day",
+    "displayName": "Trending TV Today",
+    "tmdbPath": "/trending/tv/day?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-trending-tv-week",
+    "displayName": "Trending TV This Week",
+    "tmdbPath": "/trending/tv/week?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-airing-today-tv",
+    "displayName": "Airing Today TV",
+    "tmdbPath": "/tv/airing_today?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-on-the-air-tv",
+    "displayName": "On The Air TV",
+    "tmdbPath": "/tv/on_the_air?language=en-US",
+    "mediaType": "tv",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-action-movies",
+    "displayName": "Action Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=28",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-comedy-movies",
+    "displayName": "Comedy Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=35",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-horror-movies",
+    "displayName": "Horror Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=27",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-sci-fi-movies",
+    "displayName": "Sci-Fi Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=878",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-documentary-movies",
+    "displayName": "Documentary Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=99",
+    "mediaType": "movie",
+    "maxItems": 100
+  },
+  {
+    "id": "tmdb-family-movies",
+    "displayName": "Family Movies",
+    "tmdbPath": "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=10751",
+    "mediaType": "movie",
+    "maxItems": 100
+  }
+]

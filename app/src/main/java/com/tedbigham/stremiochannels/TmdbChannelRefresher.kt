@@ -19,28 +19,27 @@ import java.net.URL
 object TmdbChannelRefresher {
     private const val TAG = "StremioChannels"
     private const val PREFS_NAME = "tv_preview_channel"
-    private const val NOW_PLAYING_CHANNEL_ID = "tmdb-now-playing-movies"
     private const val PROGRAM_INTERNAL_ID_PREFIX = "tmdb-program-"
     private const val EXTRA_PREVIEW_ITEM_ID = "preview_item_id"
     private const val EXTRA_MOVIE_TITLE = "movie_title"
     private const val TMDB_BASE_URL = "https://api.themoviedb.org/3"
     private const val TMDB_POSTER_BASE_URL = "https://image.tmdb.org/t/p/w500"
-    private const val MEDIA_TYPE_MOVIE = "movie"
-    private const val MEDIA_TYPE_TV = "tv"
     private const val TMDB_MAX_PAGES = 5
     private const val TMDB_PAGE_SIZE = 20
-    private const val DEFAULT_MAX_ITEMS = 100
     private const val CHANNEL_LOGO_SIZE_PX = 320
 
     fun refreshAll(context: Context): RefreshSummary {
         val appContext = context.applicationContext
         Log.i(TAG, "TMDB channel refresh start")
 
+        val configs = ChannelConfigStore.loadChannelConfigs(appContext)
+        Log.i(TAG, "Loaded channel configs: total=${configs.size}")
+
         var channelsRefreshed = 0
         var programsUpdated = 0
         var failures = 0
 
-        channelConfigs().forEach { config ->
+        configs.forEach { config ->
             runCatching {
                 val result = refreshChannel(appContext, config)
                 if (result.refreshed) {
@@ -62,7 +61,7 @@ object TmdbChannelRefresher {
         return RefreshSummary(channelsRefreshed, programsUpdated, failures)
     }
 
-    private fun refreshChannel(context: Context, config: ChannelConfig): ChannelRefreshResult {
+    private fun refreshChannel(context: Context, config: ChannelConfigStore.ChannelConfig): ChannelRefreshResult {
         val channelHelper = PreviewChannelHelper(context)
         val channelId = upsertPreviewChannel(context, channelHelper, config)
         if (channelId == -1L) {
@@ -125,15 +124,11 @@ object TmdbChannelRefresher {
     private fun upsertPreviewChannel(
         context: Context,
         channelHelper: PreviewChannelHelper,
-        config: ChannelConfig
+        config: ChannelConfigStore.ChannelConfig
     ): Long {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val channelKey = channelIdPreferenceKey(config)
-        val savedChannelId = prefs.getLong(channelKey, -1L)
-        val existingChannelId = savedChannelId.takeIf { it != -1L && channelHelper.getPreviewChannel(it) != null }
-            ?: channelHelper.getAllChannels()
-                .firstOrNull { it.internalProviderId == config.id || it.displayName == config.displayName }
-                ?.id
+        val existingChannelId = findExistingChannelId(context, channelHelper, config)
         val channel = PreviewChannel.Builder()
             .setDisplayName(config.displayName)
             .setDescription("TMDB-backed Android TV home channel")
@@ -159,7 +154,20 @@ object TmdbChannelRefresher {
         return channelId
     }
 
-    private fun clearExistingPrograms(context: Context, config: ChannelConfig, channelId: Long) {
+    private fun findExistingChannelId(
+        context: Context,
+        channelHelper: PreviewChannelHelper,
+        config: ChannelConfigStore.ChannelConfig
+    ): Long? {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val savedChannelId = prefs.getLong(channelIdPreferenceKey(config), -1L)
+        return savedChannelId.takeIf { it != -1L && channelHelper.getPreviewChannel(it) != null }
+            ?: channelHelper.getAllChannels()
+                .firstOrNull { it.internalProviderId == config.id || it.displayName == config.displayName }
+                ?.id
+    }
+
+    private fun clearExistingPrograms(context: Context, config: ChannelConfigStore.ChannelConfig, channelId: Long) {
         val idsToDelete = (loadSavedProgramIds(context, config) + findExistingProgramIds(context, channelId))
             .distinct()
         idsToDelete.forEach { programId ->
@@ -170,6 +178,22 @@ object TmdbChannelRefresher {
             .apply()
     }
 
+    private fun removeStoredChannel(context: Context, config: ChannelConfigStore.ChannelConfig): Boolean {
+        val channelHelper = PreviewChannelHelper(context)
+        val channelId = findExistingChannelId(context, channelHelper, config) ?: return false
+
+        clearExistingPrograms(context, config, channelId)
+        context.contentResolver.delete(TvContractCompat.buildChannelUri(channelId), null, null)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .remove(channelIdPreferenceKey(config))
+            .remove(programIdsPreferenceKey(config))
+            .apply()
+        return true
+    }
+
+    fun removeChannel(context: Context, config: ChannelConfigStore.ChannelConfig): Boolean =
+        removeStoredChannel(context.applicationContext, config)
+
     private fun launchIntent(context: Context, itemId: String, title: String? = null): Intent =
         Intent(context, LaunchStremioActivity::class.java).apply {
             action = Intent.ACTION_VIEW
@@ -179,7 +203,7 @@ object TmdbChannelRefresher {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 
-    private fun fetchTmdbItems(config: ChannelConfig): FetchResult {
+    private fun fetchTmdbItems(config: ChannelConfigStore.ChannelConfig): FetchResult {
         val token = BuildConfig.TMDB_TOKEN.trim()
         if (token.isEmpty()) {
             Log.e(TAG, "TMDB_TOKEN is missing; add it to local.properties")
@@ -207,7 +231,7 @@ object TmdbChannelRefresher {
     }
 
     private fun fetchTmdbPage(
-        config: ChannelConfig,
+        config: ChannelConfigStore.ChannelConfig,
         token: String,
         fetchUrl: String,
         uniqueItems: LinkedHashMap<Long, TmdbItem>
@@ -235,6 +259,7 @@ object TmdbChannelRefresher {
                 val json = results.getJSONObject(index)
                 val id = json.getLong("id")
                 if (uniqueItems.containsKey(id)) continue
+                if (!matchesGenreFilter(config, json)) continue
 
                 val posterPath = json.optString("poster_path").takeIf { it.isNotBlank() && it != "null" }
                 if (posterPath == null) continue
@@ -252,19 +277,33 @@ object TmdbChannelRefresher {
         }
     }
 
-    private fun titleFromJson(config: ChannelConfig, json: JSONObject): String =
+    private fun titleFromJson(config: ChannelConfigStore.ChannelConfig, json: JSONObject): String =
         when (config.mediaType) {
-            MEDIA_TYPE_TV -> json.optString("name").ifBlank { json.optString("title") }
+            ChannelConfigStore.MEDIA_TYPE_TV -> json.optString("name").ifBlank { json.optString("title") }
             else -> json.optString("title").ifBlank { json.optString("name") }
         }.ifBlank { "Untitled" }
 
     private fun pagedTmdbPath(tmdbPath: String, page: Int): String {
+        val resolvedPath = ChannelConfigStore.resolveDatePlaceholders(tmdbPath)
         val pagePattern = Regex("([?&])page=\\d+")
-        if (tmdbPath.contains(pagePattern)) {
-            return tmdbPath.replace(pagePattern, "$1page=$page")
+        if (resolvedPath.contains(pagePattern)) {
+            return resolvedPath.replace(pagePattern, "$1page=$page")
         }
-        val separator = if (tmdbPath.contains("?")) "&" else "?"
-        return "$tmdbPath${separator}page=$page"
+        val separator = if (resolvedPath.contains("?")) "&" else "?"
+        return "$resolvedPath${separator}page=$page"
+    }
+
+    private fun matchesGenreFilter(config: ChannelConfigStore.ChannelConfig, json: JSONObject): Boolean {
+        if (config.genreIds.isEmpty() || config.tmdbPath.contains("with_genres=")) return true
+
+        val tmdbGenreIds = json.optJSONArray("genre_ids") ?: return false
+        val itemGenreIds = buildSet {
+            for (index in 0 until tmdbGenreIds.length()) {
+                val id = tmdbGenreIds.optInt(index, -1)
+                if (id > 0) add(id)
+            }
+        }
+        return itemGenreIds.containsAll(config.genreIds)
     }
 
     private fun readResponse(connection: HttpURLConnection, responseCode: Int): String {
@@ -329,27 +368,27 @@ object TmdbChannelRefresher {
         } ?: emptyList()
     }
 
-    private fun loadSavedProgramIds(context: Context, config: ChannelConfig): List<Long> =
+    private fun loadSavedProgramIds(context: Context, config: ChannelConfigStore.ChannelConfig): List<Long> =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(programIdsPreferenceKey(config), null)
             ?.split(",")
             ?.mapNotNull { it.toLongOrNull() }
             .orEmpty()
 
-    private fun saveProgramIds(context: Context, config: ChannelConfig, programIds: List<Long>) {
+    private fun saveProgramIds(context: Context, config: ChannelConfigStore.ChannelConfig, programIds: List<Long>) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(programIdsPreferenceKey(config), programIds.joinToString(","))
             .apply()
     }
 
-    private fun channelIdPreferenceKey(config: ChannelConfig) = "channel_id_${config.id}"
+    private fun channelIdPreferenceKey(config: ChannelConfigStore.ChannelConfig) = "channel_id_${config.id}"
 
-    private fun programIdsPreferenceKey(config: ChannelConfig) = "program_ids_${config.id}"
+    private fun programIdsPreferenceKey(config: ChannelConfigStore.ChannelConfig) = "program_ids_${config.id}"
 
-    private fun programPrefix(config: ChannelConfig) = "$PROGRAM_INTERNAL_ID_PREFIX${config.id}-"
+    private fun programPrefix(config: ChannelConfigStore.ChannelConfig) = "$PROGRAM_INTERNAL_ID_PREFIX${config.id}-"
 
-    private fun programInternalProviderId(config: ChannelConfig, tmdbId: Long) = "${programPrefix(config)}$tmdbId"
+    private fun programInternalProviderId(config: ChannelConfigStore.ChannelConfig, tmdbId: Long) = "${programPrefix(config)}$tmdbId"
 
     private fun channelLogo(context: Context): Bitmap {
         val logo = BitmapFactory.decodeResource(context.resources, R.drawable.ic_launcher_user_foreground)
@@ -366,42 +405,6 @@ object TmdbChannelRefresher {
     private data class FetchResult(
         val items: List<TmdbItem>,
         val pagesFetched: Int
-    )
-
-    private data class ChannelConfig(
-        val id: String,
-        val displayName: String,
-        val tmdbPath: String,
-        val mediaType: String,
-        val maxItems: Int = DEFAULT_MAX_ITEMS
-    ) {
-        val previewProgramType: Int
-            get() = when (mediaType) {
-                MEDIA_TYPE_MOVIE -> TvContractCompat.PreviewPrograms.TYPE_MOVIE
-                MEDIA_TYPE_TV -> TvContractCompat.PreviewPrograms.TYPE_TV_SERIES
-                else -> TvContractCompat.PreviewPrograms.TYPE_MOVIE
-            }
-    }
-
-    private fun channelConfigs() = listOf(
-        ChannelConfig(NOW_PLAYING_CHANNEL_ID, "Now Playing Movies", "/movie/now_playing?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-popular-movies", "Popular Movies", "/movie/popular?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-trending-movies-day", "Trending Movies Today", "/trending/movie/day?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-trending-movies-week", "Trending Movies This Week", "/trending/movie/week?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-upcoming-movies", "Upcoming Movies", "/movie/upcoming?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-top-rated-movies", "Top Rated Movies", "/movie/top_rated?language=en-US", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-popular-tv", "Popular TV", "/tv/popular?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-top-rated-tv", "Top Rated TV", "/tv/top_rated?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-trending-tv-day", "Trending TV Today", "/trending/tv/day?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-trending-tv-week", "Trending TV This Week", "/trending/tv/week?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-airing-today-tv", "Airing Today TV", "/tv/airing_today?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-on-the-air-tv", "On The Air TV", "/tv/on_the_air?language=en-US", MEDIA_TYPE_TV),
-        ChannelConfig("tmdb-action-movies", "Action Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=28", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-comedy-movies", "Comedy Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=35", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-horror-movies", "Horror Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=27", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-sci-fi-movies", "Sci-Fi Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=878", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-documentary-movies", "Documentary Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=99", MEDIA_TYPE_MOVIE),
-        ChannelConfig("tmdb-family-movies", "Family Movies", "/discover/movie?language=en-US&sort_by=popularity.desc&with_genres=10751", MEDIA_TYPE_MOVIE)
     )
 
     data class RefreshSummary(
