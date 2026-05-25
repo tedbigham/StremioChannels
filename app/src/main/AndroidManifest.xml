@@ -27,7 +27,7 @@
             android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"
-            android:theme="@style/Theme.StremioChannels.NoDisplay" />
+            android:theme="@style/Theme.StremioChannels.Launch" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

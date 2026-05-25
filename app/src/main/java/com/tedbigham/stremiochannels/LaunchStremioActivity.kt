@@ -5,13 +5,24 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
+import android.view.Window
+import android.view.WindowManager
 import android.widget.Toast
 
 class LaunchStremioActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        launchStremioSearch()
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        setContentView(R.layout.activity_launch_stremio)
+
+        Handler(Looper.getMainLooper()).postDelayed(
+            { launchStremioSearch() },
+            LAUNCH_DELAY_MS
+        )
     }
 
     private fun launchStremioSearch() {
@@ -57,5 +68,6 @@ class LaunchStremioActivity : Activity() {
         const val TAG = "TvChannelsProof"
         const val EXTRA_PREVIEW_ITEM_ID = "preview_item_id"
         const val EXTRA_MOVIE_TITLE = "movie_title"
+        const val LAUNCH_DELAY_MS = 150L
     }
 }

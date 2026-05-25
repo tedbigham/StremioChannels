@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <bitmap xmlns:android="http://schemas.android.com/apk/res/android"
     android:gravity="fill"
-    android:src="@drawable/ic_launcher_cinema_foreground_asset" />
+    android:src="@drawable/ic_launcher_user_foreground" />
