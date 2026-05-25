@@ -6,4 +6,5 @@
     </style>
 
     <style name="Theme.StremioChannels" parent="Base.Theme.StremioChannels" />
+    <style name="Theme.StremioChannels.NoDisplay" parent="android:style/Theme.NoDisplay" />
 </resources>
