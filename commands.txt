@@ -1,0 +1,24 @@
+
+Build
+.\gradlew.bat :app:assembleDebug
+
+Install
+.\gradlew.bat :app:installDebug
+
+Unintstall
+adb uninstall com.tedbigham.stremiochannels
+
+Build Release APK (signed)
+.\gradlew.bat :app:assembleRelease
+
+Signed APK output:
+C:\Data\StremioChannels\app\build\outputs\apk\release\app-release.apk
+
+Install Release
+.\gradlew.bat :app:installRelease
+
+Build Bundle (signed)
+.\gradlew.bat :app:bundleRelease
+
+Signed AAB output:
+C:\Data\StremioChannels\app\build\outputs\bundle\release\app-release.aab
