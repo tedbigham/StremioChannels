@@ -337,7 +337,31 @@ class MainActivity : Activity() {
         }
 
     private fun refreshNow() {
-        TmdbRefreshScheduler.scheduleStartupRefresh(this)
+        val appContext = applicationContext
+        if (refreshInFlight) {
+            Log.i(TAG, "Immediate TMDB refresh already running")
+            return
+        }
+
+        refreshInFlight = true
+        Log.i(TAG, "Immediate TMDB refresh requested from editor")
+        Thread {
+            val summary = runCatching {
+                TmdbChannelRefresher.refreshAll(appContext)
+            }.onFailure { error ->
+                Log.e(TAG, "Immediate TMDB refresh failed", error)
+            }.getOrNull()
+
+            refreshInFlight = false
+            runOnUiThread {
+                if (summary == null) {
+                    TmdbRefreshScheduler.scheduleStartupRefresh(appContext)
+                    Toast.makeText(this, "Refresh queued", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(this, "Channels refreshed", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }.start()
     }
 
     private fun rowBackground(focused: Boolean): GradientDrawable =
@@ -383,6 +407,8 @@ class MainActivity : Activity() {
 
     private companion object {
         private const val TAG = "MainActivity"
+        @Volatile
+        private var refreshInFlight = false
         private const val COLOR_BACKGROUND = 0xFF05070A.toInt()
         private const val COLOR_ROW = 0xFF121A24.toInt()
         private const val COLOR_ROW_STROKE = 0xFF273446.toInt()
