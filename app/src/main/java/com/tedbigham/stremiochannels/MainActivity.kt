@@ -378,27 +378,45 @@ class MainActivity : Activity() {
 
     private fun refreshNow() {
         val appContext = applicationContext
-        if (refreshInFlight) {
-            Log.i(TAG, "Immediate TMDB refresh already running")
-            return
+        synchronized(REFRESH_LOCK) {
+            if (refreshInFlight) {
+                refreshPending = true
+                Log.i(TAG, "Immediate TMDB refresh already running; queued another refresh")
+                return
+            }
+            refreshInFlight = true
         }
 
-        refreshInFlight = true
         Log.i(TAG, "Immediate TMDB refresh requested from editor")
         Thread {
-            val summary = runCatching {
-                TmdbChannelRefresher.refreshAll(appContext)
-            }.onFailure { error ->
-                Log.e(TAG, "Immediate TMDB refresh failed", error)
-            }.getOrNull()
+            var refreshCount = 0
+            var lastSummary: TmdbChannelRefresher.RefreshSummary? = null
+            var failed = false
 
-            refreshInFlight = false
+            do {
+                synchronized(REFRESH_LOCK) {
+                    refreshPending = false
+                }
+                refreshCount++
+                lastSummary = runCatching {
+                    TmdbChannelRefresher.refreshAll(appContext)
+                }.onFailure { error ->
+                    failed = true
+                    Log.e(TAG, "Immediate TMDB refresh failed", error)
+                }.getOrNull()
+            } while (synchronized(REFRESH_LOCK) { refreshPending })
+
+            synchronized(REFRESH_LOCK) {
+                refreshInFlight = false
+            }
+
             runOnUiThread {
-                if (summary == null) {
+                if (failed && lastSummary == null) {
                     TmdbRefreshScheduler.scheduleStartupRefresh(appContext)
                     Toast.makeText(this, "Refresh queued", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this, "Channels refreshed", Toast.LENGTH_SHORT).show()
+                    val suffix = if (refreshCount > 1) " ($refreshCount passes)" else ""
+                    Toast.makeText(this, "Channels refreshed$suffix", Toast.LENGTH_SHORT).show()
                 }
             }
         }.start()
@@ -447,8 +465,11 @@ class MainActivity : Activity() {
 
     private companion object {
         private const val TAG = "MainActivity"
+        private val REFRESH_LOCK = Any()
         @Volatile
         private var refreshInFlight = false
+        @Volatile
+        private var refreshPending = false
         private const val COLOR_BACKGROUND = 0xFF05070A.toInt()
         private const val COLOR_ROW = 0xFF121A24.toInt()
         private const val COLOR_ROW_STROKE = 0xFF273446.toInt()
