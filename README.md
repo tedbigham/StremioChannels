@@ -1,86 +1,47 @@
 # Stremio Channels
 
-Stremio Channels is an Android TV app that publishes TMDB-backed home screen channels through the Android TV Preview Channel APIs. It is designed for TV launchers that read Android TV channels, including Projectivy Launcher.
+Stremio Channels brings TMDB-powered movie and TV rows to your Android TV home screen.
 
-The app can publish built-in movie and TV channels such as popular movies, trending TV, top rated movies, and genre-based feeds. It also includes a TV-remote-friendly channel editor for creating custom TMDB channels by combining:
+It publishes Android TV home channels filled with posters for popular, trending, top rated, upcoming, and genre-based titles. Selecting a card opens Stremio search for that movie or show.
 
-- Section: Popular, Top Rated, Trending Today, Trending This Week, Upcoming, or Now Playing
-- Media type: Movie or TV
-- One or more TMDB genre filters
+## Install
 
-Clicking a movie or TV card opens a lightweight launch screen and then sends a Stremio search deep link for the selected title. The app does not attempt direct playback.
-
-## Requirements
-
-- Android Studio or Android Gradle tooling
-- Android SDK installed
-- JDK available through Android Studio or your environment
-- TMDB API Read Access Token
-
-Minimum Android API is 26.
-
-## Local Configuration
-
-Create or update `local.properties` in the project root:
-
-```properties
-TMDB_TOKEN=your_tmdb_read_access_token_here
-```
-
-Use the TMDB API Read Access Token as a Bearer token. Do not use the older `api_key` query parameter.
-
-`local.properties` is ignored by git and should not be committed.
-
-## Build Debug
-
-From the project root:
-
-```powershell
-cd C:\Data\StremioChannels
-.\gradlew.bat :app:assembleDebug
-```
-
-The debug APK will be created at:
+Install with the Downloader app using code:
 
 ```text
-app\build\outputs\apk\debug\app-debug.apk
+3178998
 ```
 
-## Install Debug
+## Features
 
-With an Android TV device connected through ADB:
+- Built-in movie and TV channels
+- Custom channel builder for Android TV
+- Popular, Top Rated, Trending Today, Trending This Week, Upcoming, and Now Playing sections
+- Movie and TV support
+- Genre filters such as Horror, Comedy, Sci-Fi, Family, Documentary, and more
+- Automatic background refresh
+- Stremio search launch from home-screen cards
+- TV-remote-friendly interface
 
-```powershell
-.\gradlew.bat :app:installDebug
-```
+## Custom Channels (optional)
 
-Or install the APK directly:
+Open the app to create your own TMDB-backed channels.
 
-```powershell
-adb install -r app\build\outputs\apk\debug\app-debug.apk
-```
+Examples:
 
-Launch the app once after installing. This opens the custom channel editor and schedules channel refresh work.
+- Popular Horror Movies
+- Top Rated Sci-Fi Movies
+- Trending This Week Comedy TV
+- Upcoming Family Movies
 
-## Logs
-
-Useful log tag:
-
-```text
-StremioChannels
-```
-
-Example:
-
-```powershell
-adb logcat -s StremioChannels
-```
-
-Watch for channel config loading, TMDB refresh, PreviewChannel publishing, PreviewProgram counts, and Stremio launch messages.
+Custom channels appear alongside the built-in Android TV channels supported by your launcher.
 
 ## Notes
 
-- Built-in channels are defined in `app/src/main/assets/channels.json`.
-- Custom channels are stored locally on the device.
-- Background refresh uses WorkManager and also runs after device boot.
-- Some launchers may cache channel rows briefly after changes.
+- Stremio must be installed to open search results from cards.
+- The app opens Stremio search only; it does not start direct playback.
+- Launcher channel updates may take a moment to appear depending on the launcher.
+
+## TMDB Attribution
+
+This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.
