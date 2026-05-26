@@ -9,7 +9,7 @@ It publishes Android TV home channels filled with posters for popular, trending,
 Install with the Downloader app using code:
 
 ```text
-3178998
+7721493
 ```
 
 ## Setup
