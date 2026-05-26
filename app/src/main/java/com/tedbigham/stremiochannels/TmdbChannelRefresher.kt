@@ -163,7 +163,7 @@ object TmdbChannelRefresher {
         val savedChannelId = prefs.getLong(channelIdPreferenceKey(config), -1L)
         return savedChannelId.takeIf { it != -1L && channelHelper.getPreviewChannel(it) != null }
             ?: channelHelper.getAllChannels()
-                .firstOrNull { it.internalProviderId == config.id || it.displayName == config.displayName }
+                .firstOrNull { it.internalProviderId == config.id || (config.builtIn && it.displayName == config.displayName) }
                 ?.id
     }
 

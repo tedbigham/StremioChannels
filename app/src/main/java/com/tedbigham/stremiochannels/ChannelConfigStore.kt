@@ -93,8 +93,6 @@ object ChannelConfigStore {
     }
 
     fun createCustomChannel(
-        existingId: String?,
-        displayName: String,
         sourceId: String,
         mediaType: String,
         genreIds: List<Int>
@@ -102,10 +100,11 @@ object ChannelConfigStore {
         val cleanMediaType = mediaType.takeIf { it == MEDIA_TYPE_MOVIE || it == MEDIA_TYPE_TV } ?: MEDIA_TYPE_MOVIE
         val cleanSourceId = sourceId.takeIf { id -> sources.any { it.id == id } } ?: "popular"
         val cleanGenreIds = genreIds.distinct()
+        val name = suggestedDisplayName(cleanSourceId, cleanMediaType, cleanGenreIds)
         val path = buildTmdbPath(cleanSourceId, cleanMediaType, cleanGenreIds)
         return ChannelConfig(
-            id = existingId ?: "custom-${System.currentTimeMillis()}",
-            displayName = displayName.ifBlank { suggestedDisplayName(cleanSourceId, cleanMediaType, cleanGenreIds) },
+            id = "custom-${slug(name)}",
+            displayName = name,
             tmdbPath = path,
             mediaType = cleanMediaType,
             maxItems = DEFAULT_MAX_ITEMS,
@@ -238,6 +237,12 @@ object ChannelConfigStore {
             .put("maxItems", maxItems)
             .put("sourceId", sourceId)
             .put("genreIds", JSONArray(genreIds))
+
+    private fun slug(value: String): String =
+        value.lowercase(Locale.US)
+            .replace(Regex("[^a-z0-9]+"), "-")
+            .trim('-')
+            .ifBlank { "channel" }
 
     private fun fallbackChannelConfigs() = listOf(
         ChannelConfig("tmdb-now-playing-movies", "Now Playing Movies", "/movie/now_playing?language=en-US", MEDIA_TYPE_MOVIE, builtIn = true),

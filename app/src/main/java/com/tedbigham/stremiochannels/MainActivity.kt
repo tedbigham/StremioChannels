@@ -13,7 +13,6 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
-import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
@@ -172,7 +171,7 @@ class MainActivity : Activity() {
         }
 
     private fun deleteSelected(config: ChannelConfigStore.ChannelConfig) {
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Delete Channel")
             .setMessage("Delete ${config.displayName}?")
             .setNegativeButton("Cancel", null)
@@ -183,7 +182,12 @@ class MainActivity : Activity() {
                 reloadConfigs()
                 Toast.makeText(this, "Channel deleted", Toast.LENGTH_SHORT).show()
             }
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            styleDialog(dialog)
+        }
+        dialog.show()
     }
 
     private fun showChannelDialog(existing: ChannelConfigStore.ChannelConfig?) {
@@ -193,20 +197,15 @@ class MainActivity : Activity() {
 
         val container = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 12, 24, 0)
+            setPadding(32, 20, 32, 0)
         }
-
-        val nameInput = EditText(this).apply {
-            hint = "Channel name"
-            textSize = 20f
-            setSingleLine(true)
-            setText(existing?.displayName.orEmpty())
-        }
-        container.addView(labeled("Display Name", nameInput))
 
         val sourceSpinner = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, sources.map { it.displayName })
             setSelection(sources.indexOfFirst { it.id == existing?.sourceId }.takeIf { it >= 0 } ?: 0)
+            background = fieldBackground(false)
+            setPadding(18, 0, 18, 0)
+            setOnFocusChangeListener { view, hasFocus -> view.background = fieldBackground(hasFocus) }
         }
         container.addView(labeled("Section", sourceSpinner))
 
@@ -230,6 +229,13 @@ class MainActivity : Activity() {
                             tag = genre.id
                             isChecked = genre.id in selectedGenreIds
                             isFocusable = true
+                            setTextColor(Color.WHITE)
+                            setPadding(14, 0, 14, 0)
+                            background = dialogControlBackground(false)
+                            buttonTintList = android.content.res.ColorStateList.valueOf(COLOR_DIALOG_ACCENT)
+                            setOnFocusChangeListener { view, hasFocus ->
+                                view.background = dialogControlBackground(hasFocus)
+                            }
                         },
                         LinearLayout.LayoutParams(0, 56, 1f)
                     )
@@ -249,12 +255,6 @@ class MainActivity : Activity() {
                 }
             }
 
-        fun suggestNameIfBlank() {
-            if (nameInput.text.isNotBlank()) return
-            val sourceId = sources[sourceSpinner.selectedItemPosition].id
-            nameInput.setText(ChannelConfigStore.suggestedDisplayName(sourceId, selectedMediaType, selectedGenresFromUi()))
-        }
-
         renderGenres()
         container.addView(labeled("Genres", genreBox))
 
@@ -262,29 +262,51 @@ class MainActivity : Activity() {
             selectedGenreIds = selectedGenresFromUi().toSet()
             selectedMediaType = if (checkedId == 2) ChannelConfigStore.MEDIA_TYPE_TV else ChannelConfigStore.MEDIA_TYPE_MOVIE
             renderGenres()
-            suggestNameIfBlank()
         }
 
         val scrollView = ScrollView(this).apply { addView(container) }
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Create Channel" else "Channel")
             .setView(scrollView)
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save") { _, _ ->
                 val sourceId = sources[sourceSpinner.selectedItemPosition].id
                 val config = ChannelConfigStore.createCustomChannel(
-                    existingId = existing?.id,
-                    displayName = nameInput.text.toString(),
                     sourceId = sourceId,
                     mediaType = selectedMediaType,
                     genreIds = selectedGenresFromUi()
                 )
+                if (existing != null) {
+                    TmdbChannelRefresher.removeChannel(this, existing)
+                    ChannelConfigStore.deleteCustomChannel(this, existing.id)
+                }
                 ChannelConfigStore.saveCustomChannel(this, config)
                 reloadConfigs()
                 refreshNow()
                 Toast.makeText(this, "Channel saved", Toast.LENGTH_SHORT).show()
             }
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            styleDialog(dialog)
+        }
+        dialog.show()
+    }
+
+    private fun styleDialog(dialog: AlertDialog) {
+        dialog.window?.setBackgroundDrawable(dialogBackground())
+        listOf(AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_POSITIVE).forEach { buttonId ->
+            dialog.getButton(buttonId)?.apply {
+                textSize = 18f
+                setTextColor(Color.WHITE)
+                isAllCaps = false
+                minHeight = 64
+                setPadding(24, 8, 24, 8)
+                background = dialogButtonBackground(false)
+                setOnFocusChangeListener { view, hasFocus -> view.background = dialogButtonBackground(hasFocus) }
+            }
+        }
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
     }
 
     private fun labeled(label: String, child: View): LinearLayout =
@@ -294,6 +316,7 @@ class MainActivity : Activity() {
             addView(TextView(this@MainActivity).apply {
                 text = label
                 textSize = 16f
+                setTextColor(Color.WHITE)
             })
             addView(child)
         }
@@ -304,6 +327,13 @@ class MainActivity : Activity() {
             text = label
             textSize = 18f
             isChecked = checked
+            setTextColor(Color.WHITE)
+            buttonTintList = android.content.res.ColorStateList.valueOf(COLOR_DIALOG_ACCENT)
+            background = dialogControlBackground(false)
+            setPadding(14, 0, 20, 0)
+            setOnFocusChangeListener { view, hasFocus ->
+                view.background = dialogControlBackground(hasFocus)
+            }
         }
 
     private fun refreshNow() {
@@ -314,20 +344,57 @@ class MainActivity : Activity() {
         GradientDrawable().apply {
             cornerRadius = 6f
             setColor(if (focused) COLOR_BLUE else COLOR_ROW)
+            setStroke(if (focused) 3 else 1, if (focused) COLOR_DIALOG_FOCUS_STROKE else COLOR_ROW_STROKE)
         }
 
     private fun buttonBackground(focused: Boolean): GradientDrawable =
         GradientDrawable().apply {
             cornerRadius = 6f
             setColor(if (focused) COLOR_BLUE else COLOR_BUTTON)
+            setStroke(if (focused) 3 else 1, if (focused) COLOR_DIALOG_FOCUS_STROKE else COLOR_BUTTON_STROKE)
+        }
+
+    private fun dialogControlBackground(focused: Boolean): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = 10f
+            setColor(if (focused) COLOR_DIALOG_FOCUS else Color.TRANSPARENT)
+            if (focused) setStroke(3, COLOR_DIALOG_FOCUS_STROKE)
+        }
+
+    private fun dialogButtonBackground(focused: Boolean): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = 8f
+            setColor(if (focused) COLOR_DIALOG_FOCUS else COLOR_BUTTON)
+            setStroke(if (focused) 3 else 1, if (focused) COLOR_DIALOG_FOCUS_STROKE else COLOR_BUTTON)
+        }
+
+    private fun fieldBackground(focused: Boolean): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = 8f
+            setColor(if (focused) COLOR_DIALOG_FOCUS else COLOR_DIALOG_FIELD)
+            setStroke(if (focused) 3 else 1, if (focused) COLOR_DIALOG_FOCUS_STROKE else COLOR_DIALOG_FIELD_STROKE)
+        }
+
+    private fun dialogBackground(): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = 8f
+            setColor(COLOR_DIALOG_BACKGROUND)
         }
 
     private companion object {
         private const val TAG = "MainActivity"
         private const val COLOR_BACKGROUND = 0xFF05070A.toInt()
         private const val COLOR_ROW = 0xFF121A24.toInt()
+        private const val COLOR_ROW_STROKE = 0xFF273446.toInt()
         private const val COLOR_BUTTON = 0xFF253244.toInt()
+        private const val COLOR_BUTTON_STROKE = 0xFF41536A.toInt()
         private const val COLOR_BLUE = 0xFF006DFF.toInt()
         private const val COLOR_SECONDARY_TEXT = 0xFFB8C7D9.toInt()
+        private const val COLOR_DIALOG_BACKGROUND = 0xFF202733.toInt()
+        private const val COLOR_DIALOG_FIELD = 0xFF111A27.toInt()
+        private const val COLOR_DIALOG_FIELD_STROKE = 0xFF4C617A.toInt()
+        private const val COLOR_DIALOG_FOCUS = 0xFF0057D9.toInt()
+        private const val COLOR_DIALOG_FOCUS_STROKE = 0xFF8FC2FF.toInt()
+        private const val COLOR_DIALOG_ACCENT = 0xFF7FDBFF.toInt()
     }
 }
