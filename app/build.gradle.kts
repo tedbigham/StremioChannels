@@ -14,6 +14,16 @@ val tmdbToken = localProperties.getProperty("TMDB_TOKEN", "")
 val escapedTmdbToken = tmdbToken
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
+val releaseStoreFile = localProperties.getProperty("RELEASE_STORE_FILE", "")
+val releaseStorePassword = localProperties.getProperty("RELEASE_STORE_PASSWORD", "")
+val releaseKeyAlias = localProperties.getProperty("RELEASE_KEY_ALIAS", "")
+val releaseKeyPassword = localProperties.getProperty("RELEASE_KEY_PASSWORD", "")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { it.isNotBlank() }
 
 android {
     namespace = "com.tedbigham.stremiochannels"
@@ -37,9 +47,25 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        create("release") {
+            if (hasReleaseSigning) {
+                storeFile = rootProject.file(releaseStoreFile)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                logger.warn("Release signing is not configured. Add RELEASE_* values to local.properties.")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
