@@ -30,7 +30,7 @@ Choose Section, Media Type, and Genres. Programs generally have to match ALL Gen
 
 ![myimag](media/screenshots/create.jpg?raw=true)
 
-Channels update in the background, so you may need to wait to see recent changes. Try restarting Projectivy (or whatever launcher) it changes are not showing up.
+Channels update in the background, so you may need to wait to see recent changes. Try restarting Projectivy (or whatever launcher) if changes are not showing up.
 
 ![myimag](media/screenshots/done.jpg?raw=true)
 
