@@ -90,6 +90,8 @@ class MainActivity : Activity() {
         }
         actions.addView(actionButton("Create") { showChannelDialog(null) })
         actions.addView(actionButton("Delete") { selectedConfig()?.let { deleteSelected(it) } })
+        actions.addView(View(this), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        actions.addView(actionButton("About") { showAboutDialog() })
         content.addView(actions, LinearLayout.LayoutParams(320, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         root.addView(content, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
@@ -293,7 +295,45 @@ class MainActivity : Activity() {
         dialog.show()
     }
 
-    private fun styleDialog(dialog: AlertDialog) {
+    private fun showAboutDialog() {
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(32, 28, 32, 8)
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
+        content.addView(
+            ImageView(this).apply {
+                setImageResource(R.drawable.tmdb_logo)
+                adjustViewBounds = true
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 120)
+        )
+
+        content.addView(
+            TextView(this).apply {
+                text = "This application uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB."
+                setTextColor(Color.WHITE)
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setPadding(0, 24, 0, 0)
+            },
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        )
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("About")
+            .setView(content)
+            .setPositiveButton("Close", null)
+            .create()
+
+        dialog.setOnShowListener {
+            styleDialog(dialog, preferredFocusButton = AlertDialog.BUTTON_POSITIVE)
+        }
+        dialog.show()
+    }
+
+    private fun styleDialog(dialog: AlertDialog, preferredFocusButton: Int = AlertDialog.BUTTON_NEGATIVE) {
         dialog.window?.setBackgroundDrawable(dialogBackground())
         listOf(AlertDialog.BUTTON_NEGATIVE, AlertDialog.BUTTON_POSITIVE).forEach { buttonId ->
             dialog.getButton(buttonId)?.apply {
@@ -306,7 +346,7 @@ class MainActivity : Activity() {
                 setOnFocusChangeListener { view, hasFocus -> view.background = dialogButtonBackground(hasFocus) }
             }
         }
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.requestFocus()
+        dialog.getButton(preferredFocusButton)?.requestFocus()
     }
 
     private fun labeled(label: String, child: View): LinearLayout =
