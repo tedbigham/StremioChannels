@@ -1,6 +1,6 @@
 # Stremio Channels
 
-Stremio Channels brings TMDB-powered movie and TV rows to your Android TV home screen.
+Stremio Channels brings TMDB-powered movie and TV rows to your Android TV home screen or launcher.
 
 It publishes Android TV home channels filled with posters for popular, trending, top rated, upcoming, and genre-based titles. Selecting a card opens Stremio search for that movie or show.
 
